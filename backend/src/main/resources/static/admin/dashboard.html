@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Admin</title>
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <i class="fas fa-graduation-cap"></i>
+                <span>skilledUp</span>
+            </div>
+            <button class="nav-toggle" id="adminNavToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="active">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </li>
+            <li>
+                <i class="fas fa-book"></i>
+                <span>Courses</span>
+            </li>
+            <li>
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
+            </li>
+            <li class="logout-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>Hello, Admin 👋</h1>
+                <p>Here's what's happening with your academy today.</p>
+            </div>
+            <div class="header-right">
+                <button class="btn-new-course" onclick="openCreateModal()">
+                    <i class="fas fa-plus"></i> New Course
+                </button>
+            </div>
+        </header>
+
+        <!-- Action Cards -->
+        <div class="action-cards">
+            <div class="action-card create-course" onclick="openCreateModal()">
+                <div class="action-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="action-info">
+                    <h3>Create Course</h3>
+                    <p>Add a new course to your catalog</p>
+                </div>
+            </div>
+
+            <div class="action-card manage-courses" onclick="scrollToCourses()">
+                <div class="action-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="action-info">
+                    <h3>Manage Courses</h3>
+                    <p>Edit, delete, or update content</p>
+                </div>
+            </div>
+
+            <div class="action-card students" onclick="scrollToStudents()">
+                <div class="action-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="action-info">
+                    <h3>Students</h3>
+                    <p>View Progress & Enrollments</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="section-header">
+            <h2>Overview</h2>
+        </div>
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">Loading...</div>
+        </div>
+
+        <!-- Recent Courses Section -->
+        <div class="section-header">
+            <h2>Recent Courses</h2>
+        </div>
+        <div class="courses-grid" id="coursesGrid">
+            <!-- Courses loaded here -->
+        </div>
+
+        <details>
+            <summary class="section-header" style="cursor: pointer; list-style: none;">
+                <h2>Recent Payments</h2>
+            </summary>
+            <div class="payments-grid" id="paymentsGrid">
+                <div class="stat-card">Loading...</div>
+            </div>
+        </details>
+
+        <details>
+            <summary class="section-header" style="cursor: pointer; list-style: none;">
+                <h2>Students</h2>
+            </summary>
+            <div class="courses-grid" id="studentsGrid"></div>
+        </details>
+    </div>
+
+    <!-- Create Course Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <h2>Create New Course</h2>
+            <form id="createCourseForm">
+                <!-- Basic Info -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Course Title *</label>
+                    <input type="text" id="courseTitle" placeholder="e.g., Complete Web Development" required
+                        style="width: 100%;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Description</label>
+                    <textarea id="courseDesc" placeholder="Brief description of the course" rows="3"
+                        style="width: 100%;"></textarea>
+                </div>
+
+                <!-- Duration -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Duration (Months) *</label>
+                    <input type="number" id="courseDuration" placeholder="e.g., 6" min="1" required
+                        style="width: 100%;">
+                </div>
+
+                <!-- Course Type -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Course Type *</label>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="courseType" value="free" id="courseTypeFree" checked
+                                onchange="togglePriceFields()">
+                            <span style="margin-left: 8px;">Free Course</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="radio" name="courseType" value="paid" id="courseTypePaid"
+                                onchange="togglePriceFields()">
+                            <span style="margin-left: 8px;">Paid Course</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Price Fields (shown only for paid courses) -->
+                <div id="priceFields"
+                    style="display: none; margin-bottom: 15px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">MRP (₹) *</label>
+                            <input type="number" id="courseMrp" placeholder="999" min="0" step="0.01"
+                                oninput="calculateDiscount()" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Selling Price (₹)
+                                *</label>
+                            <input type="number" id="coursePrice" placeholder="499" min="0" step="0.01"
+                                oninput="calculateDiscount()" style="width: 100%;">
+                        </div>
+                    </div>
+                    <div id="discountDisplay" style="color: #10b981; font-weight: 600; font-size: 14px;"></div>
+                </div>
+
+                <!-- Category & Language -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Category</label>
+                        <select id="courseCategory"
+                            style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                            <option value="">Select Category</option>
+                            <option value="Programming">Programming</option>
+                            <option value="Data Science">Data Science</option>
+                            <option value="Web Development">Web Development</option>
+                            <option value="Mobile Development">Mobile Development</option>
+                            <option value="Design">Design</option>
+                            <option value="Business">Business</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 500;">Language</label>
+                        <select id="courseLanguage"
+                            style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">
+                            <option value="">Select Language</option>
+                            <option value="English">English</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="Hinglish">Hinglish (Hindi + English)</option>
+                            <option value="Tamil">Tamil</option>
+                            <option value="Telugu">Telugu</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Instructor -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Instructor Name</label>
+                    <input type="text" id="courseInstructor" placeholder="e.g., John Doe" style="width: 100%;">
+                </div>
+
+                <!-- Thumbnail -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Thumbnail Image</label>
+                    <input type="file" id="courseThumbnail" accept="image/*" style="width: 100%;">
+                </div>
+
+                <!-- Active Status -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="courseActive" checked>
+                        <span style="margin-left: 8px;">Make course active immediately</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%;">Create Course</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="studentDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('studentDetailsModal')">&times;</span>
+            <h2>Student Details</h2>
+            <div id="studentDetailsBody"></div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js?v=3"></script>
+    <script src="../js/admin.js?v=4"></script>
+</body>
+
+</html>
