@@ -10,7 +10,7 @@ COPY backend/src ./backend/src/
 RUN mvn -f backend/pom.xml clean package -DskipTests
 
 # Run stage
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
 
 # Copy the jar from build stage
