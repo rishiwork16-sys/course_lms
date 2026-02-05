@@ -14,8 +14,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
 
 @Configuration
 @EnableWebSecurity
@@ -32,23 +30,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> {
-                })
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/student/all-courses").permitAll()
-                        .requestMatchers("/api/student/**").hasAnyAuthority("STUDENT", "ADMIN")
-                        .requestMatchers("/api/payments/webhook").permitAll()
-                        .requestMatchers("/", "/index.html", "/login.html", "/css/**", "/js/**", "/assets/**",
-                                "/admin/**",
-                                "/student/**")
-                        .permitAll() // Static resources
-                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .csrf().disable()
+            .cors().and()
+            .authorizeRequests()
+                .antMatchers("/api/auth/**").permitAll()
+                .antMatchers("/api/student/all-courses").permitAll()
+                .antMatchers("/api/payments/webhook").permitAll()
+                .antMatchers("/", "/index.html", "/login.html", "/css/**", "/js/**", "/assets/**", "/admin/**", "/student/**").permitAll()
+                .antMatchers("/api/admin/**").hasAuthority("ADMIN")
+                .antMatchers("/api/student/**").hasAnyAuthority("STUDENT", "ADMIN")
+                .anyRequest().authenticated()
+            .and()
+            .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
