@@ -1,0 +1,10 @@
+version: 1.0
+runtime: corretto11
+build:
+  commands:
+    build:
+      - cd backend && mvn clean package -DskipTests
+run:
+  command: java -Dserver.port=8080 -jar backend/target/*.jar
+  network:
+    port: 8080
