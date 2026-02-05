@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -114,7 +115,7 @@ public class AdminController {
             r.setCreatedAt(p.getCreatedAt());
             r.setUpdatedAt(p.getUpdatedAt());
             return r;
-        }).toList();
+        }).collect(Collectors.toList());
         return ResponseEntity.ok(resp);
     }
 
@@ -199,8 +200,8 @@ public class AdminController {
     public ResponseEntity<?> getStudentDetails(@PathVariable Long userId) {
         var user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Student not found"));
         var enrollments = enrollmentRepository.findByUser(user);
-        var courseIds = enrollments.stream().map(e -> e.getCourse().getId()).toList();
-        var enrolledCourses = enrollments.stream().map(e -> e.getCourse().getTitle()).toList();
+        var courseIds = enrollments.stream().map(e -> e.getCourse().getId()).collect(Collectors.toList());
+        var enrolledCourses = enrollments.stream().map(e -> e.getCourse().getTitle()).collect(Collectors.toList());
         return ResponseEntity.ok(Map.of(
                 "courseIds", courseIds,
                 "name", user.getName(),
@@ -218,7 +219,7 @@ public class AdminController {
                 "name", u.getName(),
                 "email", u.getEmail(),
                 "phone", u.getPhone(),
-                "address", u.getAddress())).toList();
+                "address", u.getAddress())).collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
 
