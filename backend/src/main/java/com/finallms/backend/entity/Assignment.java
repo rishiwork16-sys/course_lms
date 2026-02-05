@@ -1,6 +1,6 @@
 package com.finallms.backend.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 import com.finallms.backend.enums.AssignmentType;
 

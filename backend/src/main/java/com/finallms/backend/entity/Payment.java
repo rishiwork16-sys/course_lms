@@ -1,7 +1,7 @@
 package com.finallms.backend.entity;
 
 import com.finallms.backend.enums.PaymentStatus;
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 

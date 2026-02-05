@@ -13,7 +13,7 @@ import com.finallms.backend.entity.Enrollment;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.Utils;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

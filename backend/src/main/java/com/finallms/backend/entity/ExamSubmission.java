@@ -1,6 +1,6 @@
 package com.finallms.backend.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.finallms.backend.enums.SubmissionStatus;
