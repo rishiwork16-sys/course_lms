@@ -51,6 +51,12 @@ public class OtpService {
             .maximumSize(5000)
             .build();
 
+    // Per-email cooldown
+    private Cache<String, Boolean> resendEmailCooldown = Caffeine.newBuilder()
+            .expireAfterWrite(RESEND_COOLDOWN_SECONDS, TimeUnit.SECONDS)
+            .maximumSize(5000)
+            .build();
+
     // Per-hour send counter
     private Cache<String, AtomicInteger> sendCounterHour = Caffeine.newBuilder()
             .expireAfterWrite(60, TimeUnit.MINUTES)
@@ -104,7 +110,7 @@ public class OtpService {
     public String generateAndSendEmailOtp(String email) {
         String key = normalizeKey(email);
         try {
-            boolean cooldown = resendCooldown.getIfPresent(key) != null;
+            boolean cooldown = resendEmailCooldown.getIfPresent(key) != null;
             boolean blocked = blockedPhones.getIfPresent(key) != null;
             AtomicInteger cnt = sendCounterHour.get(key, k -> new AtomicInteger(0));
             System.out.println("EMAIL OTP key=" + key + " cooldown=" + cooldown + " blocked=" + blocked + " count=" + (cnt != null ? cnt.get() : 0));
@@ -114,7 +120,7 @@ public class OtpService {
         if (blockedPhones.getIfPresent(key) != null) {
             throw new BadRequestException("Too many OTP attempts. Try again later.");
         }
-        if (resendCooldown.getIfPresent(key) != null) {
+        if (resendEmailCooldown.getIfPresent(key) != null) {
             throw new BadRequestException("Please wait before requesting OTP again.");
         }
         AtomicInteger counter = sendCounterHour.get(key, k -> new AtomicInteger(0));
@@ -123,7 +129,7 @@ public class OtpService {
             throw new BadRequestException("OTP request limit reached. Try after some time.");
         }
         counter.incrementAndGet();
-        resendCooldown.put(key, Boolean.TRUE);
+        resendEmailCooldown.put(key, Boolean.TRUE);
         String otp = String.format("%06d", new Random().nextInt(999999));
         otpCache.put(key, otp);
         if (sendEmail(email, otp)) {
