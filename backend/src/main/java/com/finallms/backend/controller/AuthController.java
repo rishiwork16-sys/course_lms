@@ -67,7 +67,13 @@ public class AuthController {
     @PostMapping("/student/email/otp")
     public ResponseEntity<String> sendEmailOtp(@RequestBody AuthDto.EmailOtpRequest request) {
         try {
-            String ans = authService.sendEmailOtp(request.getEmail());
+            String incoming = request != null ? request.getEmail() : null;
+            System.out.println("EMAIL OTP incoming: [" + incoming + "]");
+            if (incoming == null || incoming.trim().isEmpty() || !incoming.contains("@")) {
+                return ResponseEntity.badRequest().body("Invalid email");
+            }
+            String normalized = incoming.trim().toLowerCase();
+            String ans = authService.sendEmailOtp(normalized);
             if (ans.length() == 6) {
                 return ResponseEntity.ok("OTP sent successfully.");
             } else {
