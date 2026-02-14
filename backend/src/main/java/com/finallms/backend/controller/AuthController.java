@@ -64,6 +64,38 @@ public class AuthController {
         return ResponseEntity.ok(java.util.Map.of("exists", exists));
     }
 
+    @PostMapping("/student/email/otp")
+    public ResponseEntity<String> sendEmailOtp(@RequestBody AuthDto.EmailOtpRequest request) {
+        try {
+            String ans = authService.sendEmailOtp(request.getEmail());
+            if (ans.length() == 6) {
+                return ResponseEntity.ok("OTP sent successfully.");
+            } else {
+                return ResponseEntity.status(429).body(ans);
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(429).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/student/email/verify")
+    public ResponseEntity<AuthDto.AuthResponse> verifyEmailSmart(@RequestBody AuthDto.VerifyEmailOtpRequest request) {
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        boolean exists = authService.userExistsByEmail(email);
+        if (exists) {
+            return ResponseEntity.ok(authService.verifyLoginEmailOtp(request));
+        } else {
+            return ResponseEntity.ok(authService.verifyRegistrationEmailOtp(request));
+        }
+    }
+
+    @GetMapping("/student/email/check")
+    public ResponseEntity<?> checkStudentExistsByEmail(@RequestParam String email) {
+        String normalized = email != null ? email.trim().toLowerCase() : "";
+        boolean exists = authService.userExistsByEmail(normalized);
+        return ResponseEntity.ok(java.util.Map.of("exists", exists));
+    }
+
     @PostMapping("/student/guest")
     public ResponseEntity<AuthDto.AuthResponse> guestLogin() {
         return ResponseEntity.ok(authService.createGuestUser());

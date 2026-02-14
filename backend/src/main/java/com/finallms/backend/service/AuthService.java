@@ -137,6 +137,15 @@ public class AuthService {
         return userRepository.findByPhone(phone).isPresent();
     }
 
+    public String sendEmailOtp(String email) {
+        return otpService.generateAndSendEmailOtp(email);
+    }
+
+    public boolean userExistsByEmail(String email) {
+        if (email == null) return false;
+        return userRepository.findByEmail(email.trim().toLowerCase()).isPresent();
+    }
+
     public AuthDto.AuthResponse verifyLoginOtp(AuthDto.VerifyOtpRequest request) {
         // 1. Validate OTP
         if (!otpService.validateOtp(request.getPhone(), request.getOtp())) {
@@ -150,6 +159,21 @@ public class AuthService {
         // 3. Generate Token
         String token = jwtUtil.generateToken(user.getPhone(), user.getRole().name());
 
+        AuthDto.AuthResponse response = new AuthDto.AuthResponse();
+        response.setToken(token);
+        response.setRole(user.getRole().name());
+        response.setName(user.getName());
+        response.setMessage("Login successful");
+        return response;
+    }
+
+    public AuthDto.AuthResponse verifyLoginEmailOtp(AuthDto.VerifyEmailOtpRequest request) {
+        if (!otpService.validateOtp(request.getEmail(), request.getOtp())) {
+            throw new BadRequestException("Invalid or Expired OTP");
+        }
+        User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
+                .orElseThrow(() -> new RuntimeException("User not registered. Please register first."));
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         AuthDto.AuthResponse response = new AuthDto.AuthResponse();
         response.setToken(token);
         response.setRole(user.getRole().name());
@@ -182,6 +206,28 @@ public class AuthService {
         // 4. Generate Token
         String token = jwtUtil.generateToken(newUser.getPhone(), newUser.getRole().name());
 
+        AuthDto.AuthResponse response = new AuthDto.AuthResponse();
+        response.setToken(token);
+        response.setRole(newUser.getRole().name());
+        response.setName(newUser.getName());
+        response.setMessage("Registration successful");
+        return response;
+    }
+
+    public AuthDto.AuthResponse verifyRegistrationEmailOtp(AuthDto.VerifyEmailOtpRequest request) {
+        if (!otpService.validateOtp(request.getEmail(), request.getOtp())) {
+            throw new BadRequestException("Invalid or Expired OTP");
+        }
+        if (userRepository.findByEmail(request.getEmail().trim().toLowerCase()).isPresent()) {
+            throw new BadRequestException("User already registered. Please login.");
+        }
+        User newUser = new User();
+        newUser.setEmail(request.getEmail().trim().toLowerCase());
+        newUser.setRole(Role.STUDENT);
+        newUser.setName(request.getName());
+        newUser.setAddress(request.getAddress());
+        userRepository.save(newUser);
+        String token = jwtUtil.generateToken(newUser.getEmail(), newUser.getRole().name());
         AuthDto.AuthResponse response = new AuthDto.AuthResponse();
         response.setToken(token);
         response.setRole(newUser.getRole().name());

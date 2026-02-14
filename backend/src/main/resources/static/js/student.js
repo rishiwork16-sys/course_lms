@@ -1,47 +1,67 @@
-// Login Logic
 let isNewUser = false;
+let loginMode = 'phone';
 
 async function sendOtp() {
-    const phone = document.getElementById('phone').value;
-    const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
-    const fullPhone = `${cc}${phone}`.replace(/[^0-9]/g, '');
-    if (!phone) return showMessage("Please enter phone number", 'error');
-
-    try {
-        const res = await fetchWithAuth('/auth/student/otp', {
-            method: 'POST',
-            body: JSON.stringify({ phone: fullPhone })
-        });
-        if (res.ok) {
-            const data = await res.text();
-            document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'block';
-            document.getElementById('phoneDisplay').innerText = fullPhone;
-
-            // Check if user exists to show registration fields
-            checkUserExists(fullPhone);
-
-            // Prepare OTP inputs and countdown
-            setupOtpInputs();
-            startResendCountdown(30);
-
-            const match = data.match(/(\d{6})/);
-            if (match) {
-                const otpDigits = match[1].split('');
-                const inputs = document.querySelectorAll('.otp-input');
-                inputs.forEach((i, idx) => { i.value = otpDigits[idx] || ''; });
-                updateContinueButtonState();
+    if (loginMode === 'phone') {
+        const phone = document.getElementById('phone').value;
+        const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
+        const fullPhone = `${cc}${phone}`.replace(/[^0-9]/g, '');
+        if (!phone) return showMessage("Please enter phone number", 'error');
+        try {
+            const res = await fetchWithAuth('/auth/student/otp', {
+                method: 'POST',
+                body: JSON.stringify({ phone: fullPhone })
+            });
+            if (res.ok) {
+                const data = await res.text();
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('phoneDisplay').innerText = fullPhone;
+                checkUserExists(fullPhone);
+                setupOtpInputs();
+                startResendCountdown(30);
+                const match = data.match(/(\d{6})/);
+                if (match) {
+                    const otpDigits = match[1].split('');
+                    const inputs = document.querySelectorAll('.otp-input');
+                    inputs.forEach((i, idx) => { i.value = otpDigits[idx] || ''; });
+                    updateContinueButtonState();
+                    showMessage("OTP sent successfully.", 'success');
+                } else {
+                    showMessage("OTP sent successfully! Check console for OTP.", 'success');
+                }
+                console.log("OTP Response:", data);
+            } else {
+                showMessage("Failed to send OTP", 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showMessage("Error sending OTP", 'error');
+        }
+    } else {
+        const email = document.getElementById('loginEmail').value;
+        if (!email) return showMessage("Please enter email", 'error');
+        try {
+            const res = await fetchWithAuth('/auth/student/email/otp', {
+                method: 'POST',
+                body: JSON.stringify({ email })
+            });
+            if (res.ok) {
+                await res.text();
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('phoneDisplay').innerText = email;
+                checkUserExistsByEmail(email);
+                setupOtpInputs();
+                startResendCountdown(30);
                 showMessage("OTP sent successfully.", 'success');
             } else {
-                showMessage("OTP sent successfully! Check console for OTP.", 'success');
+                showMessage("Failed to send OTP", 'error');
             }
-            console.log("OTP Response:", data);
-        } else {
-            showMessage("Failed to send OTP", 'error');
+        } catch (e) {
+            console.error(e);
+            showMessage("Error sending OTP", 'error');
         }
-    } catch (e) {
-        console.error(e);
-        showMessage("Error sending OTP", 'error');
     }
 }
 
@@ -76,9 +96,6 @@ async function checkUserExists(phone) {
 }
 
 async function verifyOtp() {
-    const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
-    const basePhone = document.getElementById('phone').value;
-    const phone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
     const otp = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('').replace(/[^0-9]/g, '');
     const name = document.getElementById('name').value;
     const email = document.getElementById('email').value;
@@ -86,29 +103,50 @@ async function verifyOtp() {
 
     if (!otp || otp.length !== 6) return showMessage("Please enter complete OTP", 'error');
 
-    // Check if registration fields are visible and validate
     const regVisible = document.getElementById('registrationFields').style.display !== 'none';
     if (regVisible && !name) {
         return showMessage("Please enter your name", 'error');
     }
 
     try {
-        const res = await fetchWithAuth('/auth/student/verify', {
-            method: 'POST',
-            body: JSON.stringify({ phone, otp, name, email, address })
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userName', data.name || 'Student');
-            showMessage("Login successful! Redirecting...", 'success');
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
+        if (loginMode === 'phone') {
+            const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
+            const basePhone = document.getElementById('phone').value;
+            const phone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
+            const res = await fetchWithAuth('/auth/student/verify', {
+                method: 'POST',
+                body: JSON.stringify({ phone, otp, name, email, address })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userName', data.name || 'Student');
+                showMessage("Login successful! Redirecting...", 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                const error = await res.text();
+                showMessage(error || "Invalid OTP", 'error');
+            }
         } else {
-            const error = await res.text();
-            showMessage(error || "Invalid OTP", 'error');
+            const loginEmail = document.getElementById('loginEmail').value;
+            const res = await fetchWithAuth('/auth/student/email/verify', {
+                method: 'POST',
+                body: JSON.stringify({ email: loginEmail, otp, name, address })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userName', data.name || 'Student');
+                showMessage("Login successful! Redirecting...", 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                const error = await res.text();
+                showMessage(error || "Invalid OTP", 'error');
+            }
         }
     } catch (e) {
         console.error(e);
@@ -188,38 +226,56 @@ function startResendCountdown(seconds) {
 }
 
 async function resendOtp() {
-    const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
-    const basePhone = document.getElementById('phone').value;
-    const fullPhone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
-    try {
-        const res = await fetchWithAuth('/auth/student/otp', {
-            method: 'POST',
-            body: JSON.stringify({ phone: fullPhone })
-        });
-        if (res.ok) {
-            startResendCountdown(30);
-            const data = await res.text();
-            const match = data.match(/(\\d{6})/);
-            if (match) {
-                const otpDigits = match[1].split('');
-                const inputs = document.querySelectorAll('.otp-input');
-                inputs.forEach((i, idx) => { i.value = otpDigits[idx] || ''; });
-                updateContinueButtonState();
+    if (loginMode === 'phone') {
+        const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
+        const basePhone = document.getElementById('phone').value;
+        const fullPhone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
+        try {
+            const res = await fetchWithAuth('/auth/student/otp', {
+                method: 'POST',
+                body: JSON.stringify({ phone: fullPhone })
+            });
+            if (res.ok) {
+                startResendCountdown(30);
+                const data = await res.text();
+                const match = data.match(/(\\d{6})/);
+                if (match) {
+                    const otpDigits = match[1].split('');
+                    const inputs = document.querySelectorAll('.otp-input');
+                    inputs.forEach((i, idx) => { i.value = otpDigits[idx] || ''; });
+                    updateContinueButtonState();
+                }
+                showMessage("OTP resent successfully!", 'success');
+            } else {
+                showMessage("Failed to resend OTP", 'error');
             }
-            showMessage("OTP resent successfully!", 'success');
-        } else {
-            showMessage("Failed to resend OTP", 'error');
+        } catch (e) {
+            console.error(e);
+            showMessage("Error resending OTP", 'error');
         }
-    } catch (e) {
-        console.error(e);
-        showMessage("Error resending OTP", 'error');
+    } else {
+        const loginEmail = document.getElementById('loginEmail').value;
+        try {
+            const res = await fetchWithAuth('/auth/student/email/otp', {
+                method: 'POST',
+                body: JSON.stringify({ email: loginEmail })
+            });
+            if (res.ok) {
+                startResendCountdown(30);
+                showMessage("OTP resent successfully!", 'success');
+            } else {
+                showMessage("Failed to resend OTP", 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showMessage("Error resending OTP", 'error');
+        }
     }
 }
 
 function backToStep1() {
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step1').style.display = 'block';
-    // Clear OTP inputs
     document.querySelectorAll('.otp-input').forEach(input => input.value = '');
     document.getElementById('name').value = '';
     document.getElementById('email').value = '';
@@ -287,6 +343,55 @@ async function loadStudentDashboard() {
         }
     } catch (e) { console.error(e); }
 }
+
+async function checkUserExistsByEmail(email) {
+    try {
+        const res = await fetchWithAuth(`/auth/student/email/check?email=${encodeURIComponent(email)}`);
+        if (res.ok) {
+            const data = await res.json();
+            const showReg = !data.exists;
+            const regFields = document.getElementById('registrationFields');
+            const continueBtn = document.querySelector('#step2 .btn-continue');
+            if (showReg) {
+                regFields.style.display = 'block';
+                continueBtn.style.background = '#3b82f6';
+                continueBtn.style.color = 'white';
+                isNewUser = true;
+            } else {
+                regFields.style.display = 'none';
+                continueBtn.style.background = '#e2e8f0';
+                continueBtn.style.color = '#94a3b8';
+                isNewUser = false;
+            }
+        } else {
+            document.getElementById('registrationFields').style.display = 'block';
+            isNewUser = true;
+        }
+    } catch {
+        document.getElementById('registrationFields').style.display = 'block';
+        isNewUser = true;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const link = document.getElementById('toggleEmailLink');
+    if (link) {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (loginMode === 'phone') {
+                loginMode = 'email';
+                document.querySelector('.phone-input-wrapper').style.display = 'none';
+                document.getElementById('emailLoginGroup').style.display = 'block';
+                link.textContent = 'Continue with Phone';
+            } else {
+                loginMode = 'phone';
+                document.querySelector('.phone-input-wrapper').style.display = 'flex';
+                document.getElementById('emailLoginGroup').style.display = 'none';
+                link.textContent = 'Continue with Email';
+            }
+        });
+    }
+});
 
 async function enroll(courseId, price) {
     console.log('Enroll clicked for course:', courseId, 'price:', price);

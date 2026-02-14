@@ -41,7 +41,7 @@
                 <h1>Welcome! Sign up or Login</h1>
             </div>
 
-        <!-- Step 1: Phone Number -->
+        <!-- Step 1: Phone/Email -->
         <div id="step1">
             <div class="form-group">
                 <div class="phone-input-wrapper">
@@ -57,11 +57,14 @@
                     <input type="tel" id="phone" placeholder="Phone Number" required maxlength="10">
                 </div>
             </div>
+            <div class="form-group" id="emailLoginGroup" style="display:none;">
+                <input type="email" id="loginEmail" placeholder="Email Address">
+            </div>
             <button onclick="sendOtp()" class="btn-continue">Continue</button>
             <div class="divider">
                 <span>or</span>
             </div>
-            <a href="#" class="link-email">Continue with Email</a>
+            <a href="#" class="link-email" id="toggleEmailLink">Continue with Email</a>
         </div>
 
         <!-- Step 2: OTP Verification & Registration -->

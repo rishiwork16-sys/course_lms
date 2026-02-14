@@ -4,6 +4,9 @@ import com.finallms.backend.exception.BadRequestException;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import javax.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,15 @@ public class OtpService {
 
     @Value("${fast2sms.api.key}")
     private String apiKey;
+
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
+
+    @Value("${app.mail.from:no-reply@skilledup.local}")
+    private String mailFrom;
+
+    @Value("${app.mail.test-mode:false}")
+    private boolean mailTestMode;
 
     private static final String DLT_TEMPLATE_ID = "182903";
     private static final String FAST2SMS_URL = "https://www.fast2sms.com/dev/bulkV2";
@@ -65,51 +77,71 @@ public class OtpService {
     }
 
     public String generateAndSendOtp(String phone) {
-        String normalizedPhone = phone.replaceAll("[^0-9]", "").trim();
-        if (blockedPhones.getIfPresent(normalizedPhone) != null) {
+        String key = normalizeKey(phone);
+        if (blockedPhones.getIfPresent(key) != null) {
             throw new BadRequestException("Too many OTP attempts. Try again later.");
         }
-        if (resendCooldown.getIfPresent(normalizedPhone) != null) {
+        if (resendCooldown.getIfPresent(key) != null) {
             throw new BadRequestException("Please wait before requesting OTP again.");
         }
-        AtomicInteger counter = sendCounterHour.get(normalizedPhone, k -> new AtomicInteger(0));
+        AtomicInteger counter = sendCounterHour.get(key, k -> new AtomicInteger(0));
         if (counter.get() >= MAX_SENDS_PER_HOUR) {
-            blockedPhones.put(normalizedPhone, Boolean.TRUE);
+            blockedPhones.put(key, Boolean.TRUE);
             throw new BadRequestException("OTP request limit reached. Try after some time.");
         }
         counter.incrementAndGet();
-        resendCooldown.put(normalizedPhone, Boolean.TRUE);
+        resendCooldown.put(key, Boolean.TRUE);
         String otp = String.format("%06d", new Random().nextInt(999999));
 
-        // Store in Cache (Overwrites existing if any)
-        otpCache.put(normalizedPhone, otp);
+        otpCache.put(key, otp);
 
-        System.out.println("OTP generated for " + normalizedPhone + " at " + java.time.LocalDateTime.now());
+        System.out.println("OTP generated for " + key + " at " + java.time.LocalDateTime.now());
 
-        boolean ans = sendSms(normalizedPhone, otp);
+        boolean ans = sendSms(phone.replaceAll("[^0-9]", "").trim(), otp);
         return ans ? otp : "something wene Wrong";
-        // return otp;
     }
 
-    public boolean validateOtp(String phone, String otp) {
-        String normalizedPhone = phone.replaceAll("[^0-9]", "").trim();
-        String normalizedOtp = otp.replaceAll("[^0-9]", "").trim();
-        String cachedOtp = otpCache.getIfPresent(normalizedPhone);
+    public String generateAndSendEmailOtp(String email) {
+        String key = normalizeKey(email);
+        if (blockedPhones.getIfPresent(key) != null) {
+            throw new BadRequestException("Too many OTP attempts. Try again later.");
+        }
+        if (resendCooldown.getIfPresent(key) != null) {
+            throw new BadRequestException("Please wait before requesting OTP again.");
+        }
+        AtomicInteger counter = sendCounterHour.get(key, k -> new AtomicInteger(0));
+        if (counter.get() >= MAX_SENDS_PER_HOUR) {
+            blockedPhones.put(key, Boolean.TRUE);
+            throw new BadRequestException("OTP request limit reached. Try after some time.");
+        }
+        counter.incrementAndGet();
+        resendCooldown.put(key, Boolean.TRUE);
+        String otp = String.format("%06d", new Random().nextInt(999999));
+        otpCache.put(key, otp);
+        if (sendEmail(email, otp)) {
+            return otp;
+        }
+        return "something wene Wrong";
+    }
 
-        if (blockedPhones.getIfPresent(normalizedPhone) != null) {
+    public boolean validateOtp(String identifier, String otp) {
+        String key = normalizeKey(identifier);
+        String normalizedOtp = otp.replaceAll("[^0-9]", "").trim();
+        String cachedOtp = otpCache.getIfPresent(key);
+
+        if (blockedPhones.getIfPresent(key) != null) {
             return false;
         }
 
         if (cachedOtp != null && cachedOtp.trim().equals(normalizedOtp)) {
-            // Invalidate after successful use (One-time use)
-            otpCache.invalidate(normalizedPhone);
-            failedAttempts.invalidate(normalizedPhone);
+            otpCache.invalidate(key);
+            failedAttempts.invalidate(key);
             return true;
         }
-        AtomicInteger fails = failedAttempts.get(normalizedPhone, k -> new AtomicInteger(0));
+        AtomicInteger fails = failedAttempts.get(key, k -> new AtomicInteger(0));
         if (fails.incrementAndGet() >= MAX_FAILED_ATTEMPTS) {
-            blockedPhones.put(normalizedPhone, Boolean.TRUE);
-            otpCache.invalidate(normalizedPhone);
+            blockedPhones.put(key, Boolean.TRUE);
+            otpCache.invalidate(key);
         }
         return false;
     }
@@ -149,5 +181,33 @@ public class OtpService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    private boolean sendEmail(String to, String otp) {
+        try {
+            if (mailTestMode || mailSender == null) {
+                System.out.println("DEV EMAIL OTP to " + to + ": " + otp);
+                return true;
+            }
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setFrom(mailFrom);
+            message.setSubject("Your Login OTP");
+            message.setText("Your LMS login OTP is " + otp + ". It will expire in 15 minutes.");
+            mailSender.send(message);
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to send OTP via Email: " + e.getMessage());
+        }
+        return false;
+    }
+
+    private String normalizeKey(String input) {
+        if (input == null) return "";
+        String trimmed = input.trim();
+        if (trimmed.contains("@")) {
+            return trimmed.toLowerCase();
+        }
+        return trimmed.replaceAll("[^0-9]", "");
     }
 }
