@@ -8,7 +8,7 @@ async function sendOtp() {
         const fullPhone = `${cc}${phone}`.replace(/[^0-9]/g, '');
         if (!phone) return showMessage("Please enter phone number", 'error');
         try {
-            const res = await fetchWithAuth('/auth/student/otp', {
+            const res = await fetchWithAuth('/api/auth/student/otp', {
                 method: 'POST',
                 body: JSON.stringify({ phone: fullPhone })
             });
@@ -42,7 +42,7 @@ async function sendOtp() {
         const email = document.getElementById('loginEmail').value;
         if (!email) return showMessage("Please enter email", 'error');
         try {
-            const res = await fetchWithAuth('/auth/student/email/otp', {
+            const res = await fetchWithAuth('/api/auth/student/email/otp', {
                 method: 'POST',
                 body: JSON.stringify({ email })
             });
@@ -67,7 +67,7 @@ async function sendOtp() {
 
 async function checkUserExists(phone) {
     try {
-        const res = await fetchWithAuth(`/auth/student/check?phone=${encodeURIComponent(phone)}`);
+        const res = await fetchWithAuth(`/api/auth/student/check?phone=${encodeURIComponent(phone)}`);
         if (res.ok) {
             const data = await res.json();
             const showReg = !data.exists;
@@ -113,7 +113,7 @@ async function verifyOtp() {
             const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
             const basePhone = document.getElementById('phone').value;
             const phone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
-            const res = await fetchWithAuth('/auth/student/verify', {
+            const res = await fetchWithAuth('/api/auth/student/verify', {
                 method: 'POST',
                 body: JSON.stringify({ phone, otp, name, email, address })
             });
@@ -131,7 +131,7 @@ async function verifyOtp() {
             }
         } else {
             const loginEmail = document.getElementById('loginEmail').value;
-            const res = await fetchWithAuth('/auth/student/email/verify', {
+            const res = await fetchWithAuth('/api/auth/student/email/verify', {
                 method: 'POST',
                 body: JSON.stringify({ email: loginEmail, otp, name, address })
             });
@@ -231,7 +231,7 @@ async function resendOtp() {
         const basePhone = document.getElementById('phone').value;
         const fullPhone = `${cc}${basePhone}`.replace(/[^0-9]/g, '');
         try {
-            const res = await fetchWithAuth('/auth/student/otp', {
+            const res = await fetchWithAuth('/api/auth/student/otp', {
                 method: 'POST',
                 body: JSON.stringify({ phone: fullPhone })
             });
@@ -256,7 +256,7 @@ async function resendOtp() {
     } else {
         const loginEmail = document.getElementById('loginEmail').value;
         try {
-            const res = await fetchWithAuth('/auth/student/email/otp', {
+            const res = await fetchWithAuth('/api/auth/student/email/otp', {
                 method: 'POST',
                 body: JSON.stringify({ email: loginEmail })
             });
@@ -346,7 +346,7 @@ async function loadStudentDashboard() {
 
 async function checkUserExistsByEmail(email) {
     try {
-        const res = await fetchWithAuth(`/auth/student/email/check?email=${encodeURIComponent(email)}`);
+        const res = await fetchWithAuth(`/api/auth/student/email/check?email=${encodeURIComponent(email)}`);
         if (res.ok) {
             const data = await res.json();
             const showReg = !data.exists;
