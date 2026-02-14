@@ -103,6 +103,14 @@ public class OtpService {
 
     public String generateAndSendEmailOtp(String email) {
         String key = normalizeKey(email);
+        try {
+            boolean cooldown = resendCooldown.getIfPresent(key) != null;
+            boolean blocked = blockedPhones.getIfPresent(key) != null;
+            AtomicInteger cnt = sendCounterHour.get(key, k -> new AtomicInteger(0));
+            System.out.println("EMAIL OTP key=" + key + " cooldown=" + cooldown + " blocked=" + blocked + " count=" + (cnt != null ? cnt.get() : 0));
+        } catch (Exception ex) {
+            System.out.println("EMAIL OTP debug error: " + ex.getMessage());
+        }
         if (blockedPhones.getIfPresent(key) != null) {
             throw new BadRequestException("Too many OTP attempts. Try again later.");
         }
