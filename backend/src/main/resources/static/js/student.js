@@ -32,7 +32,8 @@ async function sendOtp() {
                 }
                 console.log("OTP Response:", data);
             } else {
-                showMessage("Failed to send OTP", 'error');
+                const err = await res.text().catch(() => '');
+                showMessage(err || "Failed to send OTP", 'error');
             }
         } catch (e) {
             console.error(e);
@@ -56,7 +57,8 @@ async function sendOtp() {
                 startResendCountdown(30);
                 showMessage("OTP sent successfully.", 'success');
             } else {
-                showMessage("Failed to send OTP", 'error');
+                const err = await res.text().catch(() => '');
+                showMessage(err || "Failed to send OTP", 'error');
             }
         } catch (e) {
             console.error(e);
@@ -247,7 +249,8 @@ async function resendOtp() {
                 }
                 showMessage("OTP resent successfully!", 'success');
             } else {
-                showMessage("Failed to resend OTP", 'error');
+                const err = await res.text().catch(() => '');
+                showMessage(err || "Failed to resend OTP", 'error');
             }
         } catch (e) {
             console.error(e);
@@ -264,7 +267,8 @@ async function resendOtp() {
                 startResendCountdown(30);
                 showMessage("OTP resent successfully!", 'success');
             } else {
-                showMessage("Failed to resend OTP", 'error');
+                const err = await res.text().catch(() => '');
+                showMessage(err || "Failed to resend OTP", 'error');
             }
         } catch (e) {
             console.error(e);
