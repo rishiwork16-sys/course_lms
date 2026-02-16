@@ -50,11 +50,11 @@ public class AuthController {
                 : "";
         request.setPhone(normalizedPhone);
         boolean exists = authService.userExistsByPhone(normalizedPhone);
-        if (exists) {
-            return ResponseEntity.ok(authService.verifyLoginOtp(request));
-        } else {
-            return ResponseEntity.ok(authService.verifyRegistrationOtp(request));
+        if (!exists) {
+            throw new com.finallms.backend.exception.BadRequestException(
+                    "New registrations are currently closed. Please contact support.");
         }
+        return ResponseEntity.ok(authService.verifyLoginOtp(request));
     }
 
     @GetMapping("/student/check")
@@ -91,11 +91,11 @@ public class AuthController {
     public ResponseEntity<AuthDto.AuthResponse> verifyEmailSmart(@RequestBody AuthDto.VerifyEmailOtpRequest request) {
         String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
         boolean exists = authService.userExistsByEmail(email);
-        if (exists) {
-            return ResponseEntity.ok(authService.verifyLoginEmailOtp(request));
-        } else {
-            return ResponseEntity.ok(authService.verifyRegistrationEmailOtp(request));
+        if (!exists) {
+            throw new com.finallms.backend.exception.BadRequestException(
+                    "New registrations are currently closed. Please contact support.");
         }
+        return ResponseEntity.ok(authService.verifyLoginEmailOtp(request));
     }
 
     @GetMapping("/student/email/check")

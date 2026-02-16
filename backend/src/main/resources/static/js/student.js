@@ -11,10 +11,15 @@ async function sendOtp() {
         if (!phone) return showMessage("Please enter phone number", 'error');
         try {
             const status = await fetchUserStatusByPhone(fullPhone);
-            if (status && status.exists && status.email) {
-                existingUserEmail = status.email;
-                existingUserPhone = fullPhone;
-                showPasswordStep(fullPhone, status.email);
+            if (status && status.exists) {
+                if (status.email) {
+                    existingUserEmail = status.email;
+                    existingUserPhone = fullPhone;
+                    showPasswordStep(fullPhone, status.email);
+                    return;
+                }
+            } else {
+                showMessage("New registrations are currently closed. Please contact support.", 'error');
                 return;
             }
         } catch (e) {
@@ -53,9 +58,14 @@ async function sendOtp() {
             showMessage("Error sending OTP", 'error');
         }
     } else {
-        const email = document.getElementById('loginEmail').value;
+        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
         if (!email) return showMessage("Please enter email", 'error');
         try {
+            const status = await fetchUserStatusByEmail(email);
+            if (!status || !status.exists) {
+                showMessage("New registrations are currently closed. Please contact support.", 'error');
+                return;
+            }
             const res = await fetchWithAuth('/auth/student/email/otp', {
                 method: 'POST',
                 body: JSON.stringify({ email })
@@ -82,6 +92,15 @@ async function sendOtp() {
 
 async function fetchUserStatusByPhone(phone) {
     const res = await fetchWithAuth(`/auth/student/check?phone=${encodeURIComponent(phone)}`);
+    if (!res.ok) {
+        return { exists: false };
+    }
+    const data = await res.json();
+    return data;
+}
+
+async function fetchUserStatusByEmail(email) {
+    const res = await fetchWithAuth(`/auth/student/email/check?email=${encodeURIComponent(email)}`);
     if (!res.ok) {
         return { exists: false };
     }
@@ -368,13 +387,12 @@ function showMessage(message, type) {
 
 // Dashboard Logic
 async function loadStudentDashboard() {
-    // Load enrolled
     const resEnrolled = await fetchWithAuth('/student/courses');
     if (resEnrolled.ok) {
         const enrolled = await resEnrolled.json();
         const grid = document.getElementById('enrolledGrid');
         if (enrolled.length === 0) {
-            grid.innerHTML = "<p style='text-align:center; padding:40px; color:#64748b;'>No courses enrolled yet. Browse courses below to get started!</p>";
+            grid.innerHTML = "<p style='text-align:center; padding:40px; color:#64748b;'>No courses enrolled yet.</p>";
         } else {
             grid.innerHTML = enrolled.map(c => `
                 <div class="course-card">
@@ -393,59 +411,17 @@ async function loadStudentDashboard() {
             `).join('');
         }
     }
-
-    // Load All Courses
-    try {
-        const resAll = await fetchWithAuth('/student/all-courses');
-        if (resAll.ok) {
-            const allCourses = await resAll.json();
-            const grid = document.getElementById('allCoursesGrid');
-            if (allCourses.length === 0) grid.innerHTML = "<p>No courses available.</p>";
-            else {
-                grid.innerHTML = allCourses.map(c => `
-                    <div class="course-card">
-                        <img src="${c.thumbnail || 'https://via.placeholder.com/300x180/667eea/ffffff?text=' + encodeURIComponent(c.title)}" onerror="this.src='https://via.placeholder.com/300x180/667eea/ffffff?text=Course'">
-                        <div class="info">
-                            <h4>${c.title}</h4>
-                            <span class="course-badge">${c.price == 0 ? 'Free' : 'Paid'}</span>
-                            <p style="color:#94a3b8; font-size:13px; margin:8px 0;">${c.description || 'Enroll now to start learning'}</p>
-                            <p style="font-weight:700; font-size:18px; color:#3b82f6; margin:10px 0;">${c.price == 0 ? 'Free' : 'Rs.' + c.price + '.00'}</p>
-                            <button class="btn-primary" style="width:100%" onclick="enroll(${c.id}, ${c.price || 0})">Enroll Now</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-    } catch (e) { console.error(e); }
 }
 
 async function checkUserExistsByEmail(email) {
-    try {
-        const res = await fetchWithAuth(`/auth/student/email/check?email=${encodeURIComponent(email)}`);
-        if (res.ok) {
-            const data = await res.json();
-            const showReg = !data.exists;
-            const regFields = document.getElementById('registrationFields');
-            const continueBtn = document.querySelector('#step2 .btn-continue');
-            if (showReg) {
-                regFields.style.display = 'block';
-                continueBtn.style.background = '#3b82f6';
-                continueBtn.style.color = 'white';
-                isNewUser = true;
-            } else {
-                regFields.style.display = 'none';
-                continueBtn.style.background = '#e2e8f0';
-                continueBtn.style.color = '#94a3b8';
-                isNewUser = false;
-            }
-        } else {
-            document.getElementById('registrationFields').style.display = 'block';
-            isNewUser = true;
-        }
-    } catch {
-        document.getElementById('registrationFields').style.display = 'block';
-        isNewUser = true;
+    const regFields = document.getElementById('registrationFields');
+    const continueBtn = document.querySelector('#step2 .btn-continue');
+    if (regFields) regFields.style.display = 'none';
+    if (continueBtn) {
+        continueBtn.style.background = '#3b82f6';
+        continueBtn.style.color = 'white';
     }
+    isNewUser = false;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
