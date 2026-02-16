@@ -133,8 +133,56 @@ public class AuthService {
         return otpService.generateAndSendOtp(phone);
     }
 
+    public java.util.Map<String, Object> getStudentCheck(String phone) {
+        String normalizedPhone = phone != null ? phone.replaceAll("[^0-9]", "").trim() : "";
+        User user = userRepository.findByPhone(normalizedPhone).orElse(null);
+        if (user == null) {
+            return java.util.Map.of("exists", false);
+        }
+        boolean hasPassword = user.getPassword() != null && !user.getPassword().isBlank();
+        String email = user.getEmail();
+        return java.util.Map.of(
+                "exists", true,
+                "hasPassword", hasPassword,
+                "email", email);
+    }
+
     public boolean userExistsByPhone(String phone) {
         return userRepository.findByPhone(phone).isPresent();
+    }
+
+    public AuthDto.AuthResponse loginStudentWithPassword(AuthDto.LoginRequest request) {
+        String email = request.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Email required");
+        }
+        String normalizedEmail = email.trim().toLowerCase();
+        String rawPassword = request.getPassword() != null ? request.getPassword().trim() : "";
+        if (rawPassword.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters");
+        }
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() != Role.STUDENT) {
+            throw new UnauthorizedException("Unauthorized");
+        }
+        boolean hasPassword = user.getPassword() != null && !user.getPassword().isBlank();
+        if (!hasPassword) {
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            userRepository.save(user);
+        } else {
+            boolean passwordOk = passwordEncoder.matches(rawPassword, user.getPassword());
+            if (!passwordOk) {
+                throw new RuntimeException("Invalid credentials");
+            }
+        }
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        AuthDto.AuthResponse response = new AuthDto.AuthResponse();
+        response.setToken(token);
+        response.setRole(user.getRole().name());
+        response.setName(user.getName());
+        response.setMessage("Login successful");
+        return response;
     }
 
     public String sendEmailOtp(String email) {

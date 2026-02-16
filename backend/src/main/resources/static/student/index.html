@@ -111,6 +111,27 @@
             
             <button onclick="verifyOtp()" class="btn-continue">Continue</button>
         </div>
+
+        <!-- Step 3: Existing Student Password Login -->
+        <div id="stepPassword" style="display:none;">
+            <button class="back-arrow" onclick="backToStep1()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 class="step-title">Enter your User ID and Password</h2>
+            <p class="phone-display-text">
+                <span id="passwordPhoneDisplay"></span>
+                <a href="#" onclick="backToStep1(); return false;" class="edit-link">Edit</a>
+            </p>
+            <div class="form-group">
+                <label>User ID (Email)</label>
+                <input type="email" id="passwordLoginEmail" placeholder="Your registered email" readonly>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="passwordLoginPassword" placeholder="Create or enter 8+ character password">
+            </div>
+            <button onclick="loginWithPassword()" class="btn-continue">Login</button>
+        </div>
         
         <p id="msg" class="msg"></p>
         </div>

@@ -59,9 +59,7 @@ public class AuthController {
 
     @GetMapping("/student/check")
     public ResponseEntity<?> checkStudentExists(@RequestParam String phone) {
-        String normalizedPhone = phone != null ? phone.replaceAll("[^0-9]", "").trim() : "";
-        boolean exists = authService.userExistsByPhone(normalizedPhone);
-        return ResponseEntity.ok(java.util.Map.of("exists", exists));
+        return ResponseEntity.ok(authService.getStudentCheck(phone));
     }
 
     @PostMapping("/student/email/otp")
@@ -82,6 +80,11 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(429).body(e.getMessage());
         }
+    }
+
+    @PostMapping("/student/login-password")
+    public ResponseEntity<AuthDto.AuthResponse> studentPasswordLogin(@RequestBody AuthDto.LoginRequest request) {
+        return ResponseEntity.ok(authService.loginStudentWithPassword(request));
     }
 
     @PostMapping("/student/email/verify")

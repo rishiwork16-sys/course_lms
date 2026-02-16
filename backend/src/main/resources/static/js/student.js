@@ -1,5 +1,7 @@
 let isNewUser = false;
 let loginMode = 'phone';
+let existingUserEmail = null;
+let existingUserPhone = null;
 
 async function sendOtp() {
     if (loginMode === 'phone') {
@@ -7,6 +9,17 @@ async function sendOtp() {
         const cc = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
         const fullPhone = `${cc}${phone}`.replace(/[^0-9]/g, '');
         if (!phone) return showMessage("Please enter phone number", 'error');
+        try {
+            const status = await fetchUserStatusByPhone(fullPhone);
+            if (status && status.exists && status.email) {
+                existingUserEmail = status.email;
+                existingUserPhone = fullPhone;
+                showPasswordStep(fullPhone, status.email);
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+        }
         try {
             const res = await fetchWithAuth('/auth/student/otp', {
                 method: 'POST',
@@ -67,6 +80,15 @@ async function sendOtp() {
     }
 }
 
+async function fetchUserStatusByPhone(phone) {
+    const res = await fetchWithAuth(`/auth/student/check?phone=${encodeURIComponent(phone)}`);
+    if (!res.ok) {
+        return { exists: false };
+    }
+    const data = await res.json();
+    return data;
+}
+
 async function checkUserExists(phone) {
     try {
         const res = await fetchWithAuth(`/auth/student/check?phone=${encodeURIComponent(phone)}`);
@@ -94,6 +116,52 @@ async function checkUserExists(phone) {
     } catch {
         document.getElementById('registrationFields').style.display = 'block';
         isNewUser = true;
+    }
+}
+
+function showPasswordStep(phone, email) {
+    document.getElementById('step1').style.display = 'none';
+    const otpStep = document.getElementById('step2');
+    if (otpStep) otpStep.style.display = 'none';
+    const pwdStep = document.getElementById('stepPassword');
+    if (pwdStep) pwdStep.style.display = 'block';
+    const phoneLabel = document.getElementById('passwordPhoneDisplay');
+    if (phoneLabel) phoneLabel.innerText = phone;
+    const emailInput = document.getElementById('passwordLoginEmail');
+    if (emailInput) emailInput.value = email || '';
+}
+
+async function loginWithPassword() {
+    const emailInput = document.getElementById('passwordLoginEmail');
+    const passInput = document.getElementById('passwordLoginPassword');
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    const password = passInput ? passInput.value : '';
+    if (!email) {
+        return showMessage("User ID (email) is required", 'error');
+    }
+    if (!password || password.length < 8) {
+        return showMessage("Password must be at least 8 characters", 'error');
+    }
+    try {
+        const res = await fetchWithAuth('/auth/student/login-password', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userName', data.name || 'Student');
+            showMessage("Login successful! Redirecting...", 'success');
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        } else {
+            const err = await res.text().catch(() => '');
+            showMessage(err || "Invalid credentials", 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showMessage("Error logging in", 'error');
     }
 }
 
@@ -278,7 +346,10 @@ async function resendOtp() {
 }
 
 function backToStep1() {
-    document.getElementById('step2').style.display = 'none';
+    const step2 = document.getElementById('step2');
+    if (step2) step2.style.display = 'none';
+    const stepPwd = document.getElementById('stepPassword');
+    if (stepPwd) stepPwd.style.display = 'none';
     document.getElementById('step1').style.display = 'block';
     document.querySelectorAll('.otp-input').forEach(input => input.value = '');
     document.getElementById('name').value = '';
